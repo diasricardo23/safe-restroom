@@ -8,8 +8,29 @@
     </b-navbar>
     <div class="flex-grow-1 d-flex flex-column align-items-center justify-content-center pt-2 pb-2">
       <div class="d-flex flex-column">
-        <div v-if="!loading" class="mb-3">
+        <div class="mb-3">
           <b-form-input v-model="search" placeholder="Busque por aqui!" v-on:change="onChangeText" class="mb-2"></b-form-input>
+
+          <b-input-group class="mb-3">
+            <b-form-input
+              id="example-input"
+              v-model="date"
+              type="text"
+              placeholder="YYYY-MM-DD"
+              autocomplete="off"
+              v-on:change="onChangeDate"
+            ></b-form-input>
+            <b-input-group-append>
+              <b-form-datepicker
+                v-model="date"
+                button-only
+                right
+                locale="en-US"
+                aria-controls="example-input"
+                @input="onChangeDate"
+              ></b-form-datepicker>
+            </b-input-group-append>
+          </b-input-group>
           <div class="d-flex">
             <b-form-checkbox
               class="mr-3"
@@ -51,7 +72,7 @@
                 <div v-if="restroom.upvote == 0 && restroom.downvote == 0" class="ranking" style="background-color: grey">
                   <div class="ranking-text">não avaliado</div>
                 </div>
-                <div v-if="restroom.upvote < restroom.downvote" class="ranking" style="background-color: red" >
+                <div v-if="restroom.upvote < restroom.downvote" class="ranking" style="background-color: red" :id="`tooltip-failure-${index}`">
                   <div class="ranking-text">mal avaliado</div>
                 </div>
                 <div v-if="restroom.upvote > restroom.downvote" class="ranking" style="background-color: green" :id="`tooltip-success-${index}`">
@@ -72,9 +93,12 @@
             </div>
           </div>
         </div>
-        <div v-else class="d-flex flex-column">
+        <div v-if="loading" class="d-flex flex-column">
           <b-spinner class="align-self-center" type="grow" variant="white" label="Spinning"></b-spinner>
           <small class="mt-1" style="color: white">Loading...</small>
+        </div>
+        <div v-if="!loading && restrooms.length == 0" class="mt-2 mb-2">
+          <small class="mt-1" style="color: white">Nenhum banheiro foi encontrado, tente pesquisar de outra forma!</small>
         </div>
         
         <div v-if="!loading" class="d-flex justify-content-between">
@@ -105,6 +129,7 @@ export default {
       unisex: false,
       acessible: false,
       search: '',
+      date: '',
       loading: true
     }
   },
@@ -121,13 +146,12 @@ export default {
 
     axios.get(`https://www.refugerestrooms.org/api/v1/restrooms?page=${this.page}&per_page=5&offset=0&ada=${this.acessible}&unisex=${this.unisex}&query=${this.search}`)
       .then(response => {
-        console.log(response.data[0])
 
         response.data.map((dt, index) => {
           this.collapse[index] = true
         })
-        this.restrooms = response.data
         this.loading = false
+        this.restrooms = response.data
       })
 
   },
@@ -143,10 +167,13 @@ export default {
 
       var URL = '';
 
-      if(this.search == ''){
-        URL = `https://www.refugerestrooms.org/api/v1/restrooms?page=${this.page}&per_page=5&offset=0&ada=${this.acessible}&unisex=${this.unisex}&query=${this.search}`
-      } else {
+      if(this.search != ''){
         URL = `https://www.refugerestrooms.org/api/v1/restrooms/search?page=${this.page}&per_page=5&offset=0&ada=${this.acessible}&unisex=${this.unisex}&query=${this.search}`
+      } else if(this.date != '') {
+        const dateArr = this.parseDate(this.date)
+        URL = `https://www.refugerestrooms.org/api/v1/restrooms/by_date?page=${this.page}&per_page=5&offset=0&ada=${this.acessible}&unisex=${this.unisex}&day=${dateArr[2]}&month=${dateArr[1]}&year=${dateArr[0]}`
+      } else {
+        URL = `https://www.refugerestrooms.org/api/v1/restrooms?page=${this.page}&per_page=5&offset=0&ada=${this.acessible}&unisex=${this.unisex}`
       }
 
       axios.get(URL)
@@ -156,9 +183,11 @@ export default {
         response.data.map((dt, index) => {
           this.collapse[index] = true
         })
-        this.restrooms = response.data
         this.loading = false
+        this.restrooms = response.data
       })
+
+      console.log('to no searchnext')
     },
 
     searchBack() {
@@ -167,10 +196,13 @@ export default {
 
       var URL = '';
 
-      if(this.search == ''){
-        URL = `https://www.refugerestrooms.org/api/v1/restrooms?page=${this.page}&per_page=5&offset=0&ada=${this.acessible}&unisex=${this.unisex}&query=${this.search}`
-      } else {
+      if(this.search != ''){
         URL = `https://www.refugerestrooms.org/api/v1/restrooms/search?page=${this.page}&per_page=5&offset=0&ada=${this.acessible}&unisex=${this.unisex}&query=${this.search}`
+      } else if(this.date != '') {
+        const dateArr = this.parseDate(this.date)
+        URL = `https://www.refugerestrooms.org/api/v1/restrooms/by_date?page=${this.page}&per_page=5&offset=0&ada=${this.acessible}&unisex=${this.unisex}&day=${dateArr[2]}&month=${dateArr[1]}&year=${dateArr[0]}`
+      } else {
+        URL = `https://www.refugerestrooms.org/api/v1/restrooms?page=${this.page}&per_page=5&offset=0&ada=${this.acessible}&unisex=${this.unisex}`
       }
 
       axios.get(URL)
@@ -180,19 +212,24 @@ export default {
         response.data.map((dt, index) => {
           this.collapse[index] = true
         })
-        this.restrooms = response.data
         this.loading = false
+        this.restrooms = response.data
       })
+
+      console.log('to no serachback')
     },
 
     onChange() {
       this.loading = true
       var URL = '';
 
-      if(this.search == ''){
-        URL = `https://www.refugerestrooms.org/api/v1/restrooms?page=${this.page}&per_page=5&offset=0&ada=${this.acessible}&unisex=${this.unisex}&query=${this.search}`
-      } else {
+      if(this.search != ''){
         URL = `https://www.refugerestrooms.org/api/v1/restrooms/search?page=${this.page}&per_page=5&offset=0&ada=${this.acessible}&unisex=${this.unisex}&query=${this.search}`
+      } else if(this.date != '') {
+        const dateArr = this.parseDate(this.date)
+        URL = `https://www.refugerestrooms.org/api/v1/restrooms/by_date?page=${this.page}&per_page=5&offset=0&ada=${this.acessible}&unisex=${this.unisex}&day=${dateArr[2]}&month=${dateArr[1]}&year=${dateArr[0]}`
+      } else {
+        URL = `https://www.refugerestrooms.org/api/v1/restrooms?page=${this.page}&per_page=5&offset=0&ada=${this.acessible}&unisex=${this.unisex}`
       }
       
       axios.get(URL)
@@ -201,30 +238,68 @@ export default {
           response.data.map((dt, index) => {
             this.collapse[index] = true
           })
+          this.loading = false
+          this.restrooms = response.data
+        })
+
+      console.log('to no change')
+    },
+
+    async onChangeText() {
+      this.loading = true
+      this.date = ''
+      var URL = ''
+
+      if(this.search == ''){
+        URL = `https://www.refugerestrooms.org/api/v1/restrooms?page=${this.page}&per_page=5&offset=0&ada=${this.acessible}&unisex=${this.unisex}`
+      } else {
+        URL = `https://www.refugerestrooms.org/api/v1/restrooms/search?page=${this.page}&per_page=5&offset=0&ada=${this.acessible}&unisex=${this.unisex}&query=${this.search}`
+      }
+      
+      await axios.get(URL)
+        .then(response => {
+          console.log('entrou')
+          response.data.map((dt, index) => {
+            this.collapse[index] = true
+          })
           this.restrooms = response.data
           this.loading = false
+          this.$forceUpdate()
+        })
+        
+        console.log('to no changeText')
+        this.$forceUpdate()
+        console.log(this.loading)
+    },
+
+    async onChangeDate() {
+      this.search = ''
+      this.loading = true
+      
+      const dateArr = this.parseDate(this.date)
+
+      if(this.date == ''){
+        URL = `https://www.refugerestrooms.org/api/v1/restrooms?page=${this.page}&per_page=5&offset=0&ada=${this.acessible}&unisex=${this.unisex}`
+      } else {
+        URL = `https://www.refugerestrooms.org/api/v1/restrooms/by_date?page=${this.page}&per_page=5&offset=0&ada=${this.acessible}&unisex=${this.unisex}&day=${dateArr[2]}&month=${dateArr[1]}&year=${dateArr[0]}`
+      }
+
+      console.log(URL)
+      
+      await axios.get(URL)
+        .then(response => {
+          console.log('entrou')
+          response.data.map((dt, index) => {
+            this.collapse[index] = true
+          })
+          this.restrooms = response.data
+          this.loading = false
+          this.$forceUpdate()
         })
     },
 
-    onChangeText() {
-      this.loading = true
-      var URL = '';
-
-      if(this.search == ''){
-        URL = `https://www.refugerestrooms.org/api/v1/restrooms?page=${this.page}&per_page=5&offset=0&ada=${this.acessible}&unisex=${this.unisex}&query=${this.search}`
-      } else {
-        URL = `https://www.refugerestrooms.org/api/v1/restrooms/search?page=${this.page}&per_page=5&offset=0&ada=${this.acessible}&unisex=${this.unisex}&query=${this.search}`
-      }
-      
-      axios.get(URL)
-        .then(response => {
-          
-          response.data.map((dt, index) => {
-            this.collapse[index] = true
-          })
-          this.restrooms = response.data
-          this.loading = false
-        })
+    parseDate(date) {
+      return date.split('-')
     }
   }
 }
