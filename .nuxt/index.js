@@ -14,6 +14,7 @@ import { BootstrapVue, BootstrapVueIcons } from 'bootstrap-vue'
 Vue.use(BootstrapVue)
 Vue.use(BootstrapVueIcons)
 
+
 /* Plugins */
 
 import nuxt_plugin_plugin_81fcbca4 from 'nuxt_plugin_plugin_81fcbca4' // Source: ./components/plugin.js (mode: 'all')
